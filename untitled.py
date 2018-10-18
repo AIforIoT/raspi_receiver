@@ -1,10 +1,12 @@
 from flask import Flask, request
 import numpy as np
+from data_request_object import FrameData
+import xmlrpc.client 
 
 app = Flask(__name__)
 
-BUFFER_MAX_SIZE = 512  # Size of the buffer (To be changed)
-BUFFER_CMD_MAX_SIZE = 1024  # Size of the buffer that will save the whole audio. (To be changed)
+BUFFER_MAX_SIZE = 16000  # Size of the buffer (To be changed)
+BUFFER_CMD_MAX_SIZE = 64000  # Size of the buffer that will save the whole audio. (To be changed)
 
 # Declare buffers
 buffersDict = dict()
@@ -20,8 +22,8 @@ def hello_world():
     return 'Hello World!'
 
 
-@app.route('/<ide>', methods=['POST'])
-def get_audio(ide):
+@app.route('/<ide>/<delay>', methods=['POST'])
+def get_audio(ide, delay):
     """
     ESP32 is sending us audio buffer!
 
@@ -38,9 +40,10 @@ def get_audio(ide):
             positionsDict[ide] += 1
             if positionsDict[ide] >= BUFFER_MAX_SIZE:
                 # Noise attenuation of some kind?
-                if is_voice(ide):
-                    # KeyWord Spotting - Problem: wait for this module to respond is thread blocking
-                    pass
+                # KeyWord Spotting
+                to_send = FrameData(np.array2string(buffersDict[ide]), ide, delay, 'None', str(positionsDict[ide]))
+                client = xmlrpc.client.ServerProxy("http://localhost:8082/api")
+                client.hello(to_send)
 
                 # Truncate
                 buffersDict[ide][0:int(BUFFER_MAX_SIZE / 2)] = buffersDict[ide][int(BUFFER_MAX_SIZE / 2):]
@@ -61,7 +64,7 @@ def get_audio(ide):
     return 200
 
 
-@app.route('/<ide>/<delay>/', methods=['GET'])
+@app.route('/<ide>/<delay>', methods=['GET'])
 def end_sending(ide, delay):
     """
     The tx was ended, its time to speech recognition!
@@ -73,12 +76,20 @@ def end_sending(ide, delay):
     """
     print("End of transmision for {} with delay: {}".format(ide, delay))
     if commandsPositionDict[ide] is not 0:
-        # TODO: Send commandBufferDict[ide][0:commandsPositionDict[ide]] to speech to text module.
-        # Maybe only if ide is the choosen one
-        pass
+        #TODO: Send commandsBufferDict[ide][0:commandsPositionDict[ide]] to speech to text module.
+        to_send = FrameData(np.array2string(commandsBufferDict[ide]), ide, delay, 'None', str(commandsPositionDict[ide]))
+        client = xmlrpc.client.ServerProxy("http://localhost:8082/api")
+        client.hello(to_send)
+
     keyword_found = False
     commandsPositionDict[ide] = 0
     positionsDict[ide] = 0
+    return 200
+
+
+@app.route('/keyword_detected', methods=['GET'])
+def keyword_detector():
+    keyword_found = True
     return 200
 
 
