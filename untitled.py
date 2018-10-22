@@ -22,12 +22,14 @@ def hello_world():
     return 'Hello World!'
 
 
-@app.route('/<ide>/<delay>', methods=['POST'])
-def get_audio(ide, delay):
+@app.route('/audio/<ide>/<delay>/<timestamp>', methods=['POST'])
+def get_audio(ide, delay, timestamp):
     """
     ESP32 is sending us audio buffer!
 
     :param ide: Id of the ESP32.
+    :param delay: Delay between bitcon and sound detected.
+    :param timestamp:
     :return: 200 OK
     """
     if ide not in buffersDict:
@@ -41,7 +43,7 @@ def get_audio(ide, delay):
             if positionsDict[ide] >= BUFFER_MAX_SIZE:
                 # Noise attenuation of some kind?
                 # KeyWord Spotting
-                to_send = FrameData(np.array2string(buffersDict[ide]), ide, delay, 'None', str(positionsDict[ide]))
+                to_send = FrameData(np.array2string(buffersDict[ide]), ide, delay, 'None', str(positionsDict[ide]), timestamp)
                 client = xmlrpc.client.ServerProxy("http://localhost:8082/api")
                 client.hello(to_send)
 
@@ -64,20 +66,20 @@ def get_audio(ide, delay):
     return 200
 
 
-@app.route('/<ide>/<delay>', methods=['GET'])
-def end_sending(ide, delay):
+@app.route('/audio/<ide>/<delay>/<timestamp>', methods=['GET'])
+def end_sending(ide, delay, timestamp):
     """
     The tx was ended, its time to speech recognition!
     For esp32 speech buffer calculate the one with more power and send it to the speech recognition engine.
 
     :param ide: ESP32 ID
-    :param delay: Timestamp (for localization purpose)
+    :param delay: Delay between bitcon and sound detected.
+    :param timestamp: A TimeStamp
     :return: 200 OK ot 500 Error
     """
     print("End of transmision for {} with delay: {}".format(ide, delay))
     if commandsPositionDict[ide] is not 0:
-        #TODO: Send commandsBufferDict[ide][0:commandsPositionDict[ide]] to speech to text module.
-        to_send = FrameData(np.array2string(commandsBufferDict[ide]), ide, delay, 'None', str(commandsPositionDict[ide]))
+        to_send = FrameData(np.array2string(commandsBufferDict[ide]), ide, delay, 'None', str(commandsPositionDict[ide]), timestamp)
         client = xmlrpc.client.ServerProxy("http://localhost:8082/api")
         client.hello(to_send)
 
