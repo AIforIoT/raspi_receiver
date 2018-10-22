@@ -1,8 +1,11 @@
 import numpy as np
 from data_request_object import FrameData
-import xmlrpc.client 
+import xmlrpc.client
 
-buff = np.ndarray([320000])
+from scipy.io.wavfile import read
+a = read("./Iouti.wav")
+
+buff = np.array(a[1], dtype=float)
 ide = str(3)
 delay = str(432)
 pos = str(50)
