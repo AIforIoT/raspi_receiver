@@ -12,6 +12,6 @@ pos = str(50)
 timestamp = str(1540196375000)
 
 
-to_send = FrameData(np.array2string(buff), ide, delay, 'None', pos, timestamp)
+to_send = FrameData(np.array2string(buff), '0', ide, delay, 'None', pos, timestamp)
 client = xmlrpc.client.ServerProxy("http://localhost:8082/api")
 client.hello(to_send)

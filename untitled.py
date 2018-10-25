@@ -43,7 +43,7 @@ def get_audio(ide, delay, timestamp):
             if positionsDict[ide] >= BUFFER_MAX_SIZE:
                 # Noise attenuation of some kind?
                 # KeyWord Spotting
-                to_send = FrameData(np.array2string(buffersDict[ide]), ide, delay, 'None', str(positionsDict[ide]), timestamp)
+                to_send = FrameData(np.array2string(buffersDict[ide]), '0', ide, delay, 'None', str(positionsDict[ide]), timestamp)
                 client = xmlrpc.client.ServerProxy("http://localhost:8082/api")
                 client.hello(to_send)
 
@@ -79,7 +79,7 @@ def end_sending(ide, delay, timestamp):
     """
     print("End of transmision for {} with delay: {}".format(ide, delay))
     if commandsPositionDict[ide] is not 0:
-        to_send = FrameData(np.array2string(commandsBufferDict[ide]), ide, delay, 'None', str(commandsPositionDict[ide]), timestamp)
+        to_send = FrameData(np.array2string(commandsBufferDict[ide]), '1', ide, delay, 'None', str(commandsPositionDict[ide]), timestamp)
         client = xmlrpc.client.ServerProxy("http://localhost:8082/api")
         client.hello(to_send)
 

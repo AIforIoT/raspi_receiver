@@ -13,6 +13,8 @@ class ConfigParams:
     __delay: object
     __power: object
     __offset: object
+    __timestamp: object
+
 
     def __init__(self, esp_id, delay, power, offset, timestamp):
         self.esp_id = esp_id
@@ -66,10 +68,13 @@ class ConfigParams:
 class FrameData:
     __numpy_data = object
     __config_params = object
+    __data_type: object
 
-    def __init__(self, numpy_data, esp_id, delay, power, offset, timestamp):
+
+    def __init__(self, numpy_data, data_type, esp_id, delay, power, offset, timestamp):
         self.numpy_data = numpy_data
         self.config_params = ConfigParams(esp_id, delay, power, offset, timestamp)
+        self.data_type = data_type
 
 
     @property
@@ -87,3 +92,11 @@ class FrameData:
     @config_params.setter
     def config_params(self, val):
         self.__config_params = val
+
+    @property
+    def data_type(self):
+        return self.__data_type
+
+    @data_type.setter
+    def data_type(self, val):
+        self.__data_type = val
