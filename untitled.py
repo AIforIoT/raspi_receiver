@@ -1,6 +1,8 @@
+#!/usr/bin/python3
 from flask import Flask, request
 import numpy as np
-from data_request_object import FrameData
+import struct
+#from data_request_object import FrameData
 import xmlrpc.client 
 
 app = Flask(__name__)
@@ -37,33 +39,53 @@ def get_audio(ide, delay, timestamp):
         positionsDict[ide] = 0
 
     if not keyword_found:  # No keyword detected yet, fill up the buffer and send it to the keyword spotting module
-        for byte in request.data:
-            buffersDict[ide][positionsDict[ide]] = byte
+        data = request.data.split(b',')
+        for d in data:
+            byte = 0
+            try:
+                byte = int(d)
+            except:
+                print("Error.... byte not int")
+            buffersDict[ide][int(positionsDict[ide])] = byte
             positionsDict[ide] += 1
             if positionsDict[ide] >= BUFFER_MAX_SIZE:
                 # Noise attenuation of some kind?
                 # KeyWord Spotting
+                #print("Keyword spotting")
+                #print(buffersDict[ide])
                 to_send = FrameData(np.array2string(buffersDict[ide]), '0', ide, delay, 'None', str(positionsDict[ide]), timestamp)
                 client = xmlrpc.client.ServerProxy("http://localhost:8082/api")
                 client.hello(to_send)
 
                 # Truncate
                 buffersDict[ide][0:int(BUFFER_MAX_SIZE / 2)] = buffersDict[ide][int(BUFFER_MAX_SIZE / 2):]
-                positionsDict[ide] = BUFFER_MAX_SIZE / 2
+                positionsDict[ide] = int(BUFFER_MAX_SIZE / 2)
+                #print(positionsDict[ide])
+
     else:
         # Speech to text? -> Other buffer
         if ide not in commandsBufferDict:
             commandsBufferDict[ide] = np.ndarray([BUFFER_CMD_MAX_SIZE])
             commandsPositionDict[ide] = 0
 
-        for byte in request.data:
+        data = request.data.split(b',')
+        for d in data:
+            byte = 0
+            try:
+                byte = int(d)
+            except:
+                print("Error.... byte not int")
+            
+            commandsBufferDict[ide][int(commandsPositionDict[ide])] = byte
+            commandsPositionDict[ide] += 1
+            
             if commandsPositionDict[ide] == BUFFER_CMD_MAX_SIZE:  # The buffer can overflow here!!
                 print("BUG! Buffer is full! Exiting 'for' statement to not crash")
                 break
-            commandsBufferDict[ide][commandsPositionDict[ide]] = byte
-            commandsPositionDict[ide] += 1
 
-    return 200
+    print(positionsDict[ide])
+    print(buffersDict[ide])
+    return "200"
 
 
 @app.route('/audio/<ide>/<delay>/<timestamp>', methods=['GET'])
@@ -79,7 +101,8 @@ def end_sending(ide, delay, timestamp):
     """
     print("End of transmision for {} with delay: {}".format(ide, delay))
     if commandsPositionDict[ide] is not 0:
-        to_send = FrameData(np.array2string(commandsBufferDict[ide]), '1', ide, delay, 'None', str(commandsPositionDict[ide]), timestamp)
+        print("End sending cmd")
+	to_send = FrameData(np.array2string(commandsBufferDict[ide]), '1', ide, delay, 'None', str(commandsPositionDict[ide]), timestamp)
         client = xmlrpc.client.ServerProxy("http://localhost:8082/api")
         client.hello(to_send)
 
